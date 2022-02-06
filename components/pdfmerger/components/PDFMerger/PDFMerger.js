@@ -91,14 +91,13 @@ export default function PDFMerger() {
     const fileType = input.type.replace("image/", "")
     console.log(fileType)
     reader.onload = () => {
-      console.log(reader.result)
-      if (fileType == "jpeg") {
+      if (fileType === "jpeg") {
         addImage(reader.result, "jpg")
-      } else if (fileType == "png") {
+      } else if (fileType === "png") {
         addImage(reader.result, "png")
       }
     }
-    reader.readAsBinaryString(input)
+    reader.readAsArrayBuffer(input)
 
   }
 
@@ -107,8 +106,7 @@ export default function PDFMerger() {
       <button className="bg-black text-white rounded-md p-4" onClick={addFirstMockImage}>Add JPG Image</button>
       <button className="bg-black text-white rounded-md p-4" onClick={addSecondMockImage}>Add PNG Image</button>
       <form className="bg-black text-white rounded-md p-4">
-        <input type="file" 
-          type="file"
+        <input type="file"
           multiple
           onChange={(e) => onFileUpload(e.target.files[0])}
         />
