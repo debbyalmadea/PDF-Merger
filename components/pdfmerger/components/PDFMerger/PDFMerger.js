@@ -5,6 +5,7 @@ import { image } from "tailwindcss/lib/util/dataTypes";
 
 export default function PDFMerger() {
   const [pdf, setPdf] = useState(null)
+  const [fileList, setFileList] = useState([])
 
   useEffect(() => {
     async function initPdf() {
@@ -85,10 +86,33 @@ export default function PDFMerger() {
     await addImage(pngImageBytes, "png")
   }
 
+  async function onFileUpload(input) {
+    const reader = new FileReader()
+    const fileType = input.type.replace("image/", "")
+    console.log(fileType)
+    reader.onload = () => {
+      console.log(reader.result)
+      if (fileType == "jpeg") {
+        addImage(reader.result, "jpg")
+      } else if (fileType == "png") {
+        addImage(reader.result, "png")
+      }
+    }
+    reader.readAsBinaryString(input)
+
+  }
+
   return (
     <div className="flex flex-col space-y-2">
       <button className="bg-black text-white rounded-md p-4" onClick={addFirstMockImage}>Add JPG Image</button>
       <button className="bg-black text-white rounded-md p-4" onClick={addSecondMockImage}>Add PNG Image</button>
+      <form className="bg-black text-white rounded-md p-4">
+        <input type="file" 
+          type="file"
+          multiple
+          onChange={(e) => onFileUpload(e.target.files[0])}
+        />
+      </form>
       <button className="bg-black text-white rounded-md p-4" onClick={downloadPdf}>Download PDF</button>
     </div>
   )
