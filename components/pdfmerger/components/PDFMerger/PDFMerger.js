@@ -87,31 +87,62 @@ export default function PDFMerger() {
   }
 
   async function onFileUpload(input) {
-    const reader = new FileReader()
-    const fileType = input.type.replace("image/", "")
-    console.log(fileType)
-    reader.onload = () => {
-      if (fileType === "jpeg") {
-        addImage(reader.result, "jpg")
-      } else if (fileType === "png") {
-        addImage(reader.result, "png")
-      }
+    setFileList(input)
+    console.log(input)
+    
+    for (let i = 0, numFiles = input.length; i < numFiles; i++) {
+      console.log("file embeded.")
+      var reader = new FileReader()
+      var file = input[i]
+      var fileType = file.type.replace("image/", "")
+      reader.onload = () => {
+        if (reader.result == null) {
+          console.log(reader.result)
+          console.log("failed to make file reader")
+        }
+        else {
+          if (fileType === "jpeg") {
+              addImage(reader.result, "jpg")
+            } else if (fileType === "png") {
+              addImage(reader.result, "png")
+            }
+
+          }
+        }
+      reader.readAsArrayBuffer(file)
     }
-    reader.readAsArrayBuffer(input)
 
   }
 
   return (
-    <div className="flex flex-col space-y-2">
-      <button className="bg-black text-white rounded-md p-4" onClick={addFirstMockImage}>Add JPG Image</button>
-      <button className="bg-black text-white rounded-md p-4" onClick={addSecondMockImage}>Add PNG Image</button>
-      <form className="bg-black text-white rounded-md p-4">
-        <input type="file"
+    <div className="container">
+      <h1 className="title">Merge PDF</h1>
+      <h2 className="sub-title">Convert JPG/PNG images to PDF in seconds</h2>
+      <div className="buttons">
+
+      <form className="form">
+        <label className="input-label" htmlFor="upload">Upload JPG/PNG Files</label>
+        <input id="upload" type="file" className="input-file"
           multiple
-          onChange={(e) => onFileUpload(e.target.files[0])}
+          onChange={(e) => onFileUpload(e.target.files)}
         />
       </form>
-      <button className="bg-black text-white rounded-md p-4" onClick={downloadPdf}>Download PDF</button>
+
+      <ul className="uploaded-file-list">
+      {fileList.length > 0 && (
+        Object.keys(fileList).map((key) => (
+          <li className="uploaded-file" key={key}>
+            {fileList[key].name}
+          </li>
+        ))
+        )}
+        {fileList.length === 0 && (
+          <li className="no-result">No file uploaded. yet.</li>
+        )}
+      </ul>
+
+      <button className="download" onClick={downloadPdf}>Download PDF</button>
+      </div>
     </div>
   )
 }
