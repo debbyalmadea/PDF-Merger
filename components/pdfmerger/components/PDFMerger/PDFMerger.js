@@ -12,6 +12,7 @@ export default function PDFMerger() {
       const pdfDoc = await PDFDocument.create()
       setPdf(pdfDoc)
     }
+
     initPdf().then(r => {
       console.log('init pdf successfully')
     })
@@ -89,29 +90,33 @@ export default function PDFMerger() {
   async function onFileUpload(input) {
     setFileList(input)
     console.log(input)
-    
-    for (let i = 0, numFiles = input.length; i < numFiles; i++) {
-      console.log("file embeded.")
-      var reader = new FileReader()
-      var file = input[i]
-      var fileType = file.type.replace("image/", "")
+
+    Array.from(input).forEach(file => {
+      const reader = new FileReader()
+      const fileType = file.type.replace("image/", "")
+
+      reader.onerror = () => {
+        console.error("failed to read file to buffer", file, reader.error)
+      }
+
       reader.onload = () => {
         if (reader.result == null) {
-          console.log(reader.result)
-          console.log("failed to make file reader")
+          console.error("file result is null", file, reader.error)
+          return
         }
-        else {
-          if (fileType === "jpeg") {
-              addImage(reader.result, "jpg")
-            } else if (fileType === "png") {
-              addImage(reader.result, "png")
-            }
 
-          }
+        console.info("successfully read file", file)
+        if (fileType === "jpeg") {
+          addImage(reader.result, "jpg")
+        } else if (fileType === "png") {
+          addImage(reader.result, "png")
         }
+
+        console.info("successfully embed file to pdf", file)
+      }
+
       reader.readAsArrayBuffer(file)
-    }
-
+    })
   }
 
   return (
@@ -120,28 +125,28 @@ export default function PDFMerger() {
       <h2 className="sub-title">Convert JPG/PNG images to PDF in seconds</h2>
       <div className="buttons">
 
-      <form className="form">
-        <label className="input-label" htmlFor="upload">Upload JPG/PNG Files</label>
-        <input id="upload" type="file" className="input-file"
-          multiple
-          onChange={(e) => onFileUpload(e.target.files)}
-        />
-      </form>
+        <form className="form">
+          <label className="input-label" htmlFor="upload">Upload JPG/PNG Files</label>
+          <input id="upload" type="file" className="input-file"
+                 multiple
+                 onChange={(e) => onFileUpload(e.target.files)}
+          />
+        </form>
 
-      <ul className="uploaded-file-list">
-      {fileList.length > 0 && (
-        Object.keys(fileList).map((key) => (
-          <li className="uploaded-file" key={key}>
-            {fileList[key].name}
-          </li>
-        ))
-        )}
-        {fileList.length === 0 && (
-          <li className="no-result">No file uploaded. yet.</li>
-        )}
-      </ul>
+        <ul className="uploaded-file-list">
+          {fileList.length > 0 && (
+            Object.keys(fileList).map((key) => (
+              <li className="uploaded-file" key={key}>
+                {fileList[key].name}
+              </li>
+            ))
+          )}
+          {fileList.length === 0 && (
+            <li className="no-result">No file uploaded. yet.</li>
+          )}
+        </ul>
 
-      <button className="download" onClick={downloadPdf}>Download PDF</button>
+        <button className="download" onClick={downloadPdf}>Download PDF</button>
       </div>
     </div>
   )
