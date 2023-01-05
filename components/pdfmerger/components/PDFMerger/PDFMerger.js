@@ -46,6 +46,12 @@ export default function PDFMerger() {
     })
   }
 
+  async function addPdf(pdfByte) {
+    const newPDF = await PDFDocument.load(pdfByte)
+    const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices())
+    copiedPages.forEach((page) => pdf.addPage(page));
+  }
+
   async function getJpgImage(imageBytes) {
     if (pdf == null) {
       console.log('pdf not init')
@@ -72,21 +78,6 @@ export default function PDFMerger() {
     const pdfBytes = await pdf.save()
     download(pdfBytes, "pdf-lib_image_embedding_example.pdf", "application/pdf");
   }
-
-  async function addFirstMockImage() {
-    const jpgUrl = 'https://pdf-lib.js.org/assets/cat_riding_unicorn.jpg'
-    const jpgImageBytes = await fetch(jpgUrl).then((res) => res.arrayBuffer())
-
-    await addImage(jpgImageBytes, "jpg")
-  }
-
-  async function addSecondMockImage() {
-    const pngUrl = 'https://pdf-lib.js.org/assets/minions_banana_alpha.png'
-    const pngImageBytes = await fetch(pngUrl).then((res) => res.arrayBuffer())
-
-    await addImage(pngImageBytes, "png")
-  }
-
   async function onFileUpload(input) {
     setFileList(input)
     console.log(input)
@@ -106,10 +97,12 @@ export default function PDFMerger() {
         }
 
         console.info("successfully read file", file)
-        if (fileType === "jpeg") {
+        if (fileType === "image/jpeg") {
           addImage(reader.result, "jpg")
-        } else if (fileType === "png") {
+        } else if (fileType === "image/png") {
           addImage(reader.result, "png")
+        } else if (fileType === "application/pdf") {
+          addPdf(reader.result)
         }
 
         console.info("successfully embed file to pdf", file)
