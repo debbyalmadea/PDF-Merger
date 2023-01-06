@@ -82,6 +82,8 @@ export default function PDFMerger() {
       "pdf-lib_image_embedding_example.pdf",
       "application/pdf"
     );
+
+    await resetPDF();
   }
   async function onFileUpload(input) {
     setFileList(input);
@@ -89,7 +91,7 @@ export default function PDFMerger() {
 
     Array.from(input).forEach((file) => {
       const reader = new FileReader();
-      const fileType = file.type.replace("image/", "");
+      const fileType = file.type;
 
       reader.onerror = () => {
         console.error("failed to read file to buffer", file, reader.error);
@@ -117,6 +119,12 @@ export default function PDFMerger() {
     });
   }
 
+  async function resetPDF() {
+    setFileList([]);
+    const pdfDoc = await PDFDocument.create();
+    setPdf(pdfDoc);
+  }
+
   return (
     <div>
       <h1 className="lg:text-8xl text-4xl font-extrabold text-center">
@@ -128,14 +136,15 @@ export default function PDFMerger() {
       <div className="flex flex-col justify-center items-center">
         <button className="relative w-full">
           <label
-            className=" lg:text-2xl text-lg text-white lg:px-32 px-[55px] bg-red-500 py-4 rounded-2xl hover:shadow-lg hover:shadow-red-200 hover:cursor-pointer"
+            className=" lg:text-2xl text-lg text-white lg:px-28 px-12 bg-red-500 py-4 rounded-2xl hover:shadow-lg hover:shadow-red-200 hover:cursor-pointer"
             htmlFor="upload"
           >
-            Upload JPG/PNG Files
+            Select Images/PDF Files
           </label>
           <input
             id="upload"
             type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
             className="absolute z-[-1] top-0 left-0 w-full text-6xl"
             multiple
             onChange={(e) => onFileUpload(e.target.files)}
@@ -146,7 +155,7 @@ export default function PDFMerger() {
           {fileList.length > 0 &&
             Object.keys(fileList).map((key) => (
               <li
-                className="text-start lg:w-[460px] w-[240px] text-ellipsis overflow-hidden"
+                className="text-start lg:w-[460px] w-[280px] text-ellipsis overflow-hidden"
                 key={key}
               >
                 {fileList[key].name}
