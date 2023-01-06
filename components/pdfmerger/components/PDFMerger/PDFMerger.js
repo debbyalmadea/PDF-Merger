@@ -84,7 +84,7 @@ export default function PDFMerger() {
 
     Array.from(input).forEach(file => {
       const reader = new FileReader()
-      const fileType = file.type.replace("image/", "")
+      const fileType = file.type
 
       reader.onerror = () => {
         console.error("failed to read file to buffer", file, reader.error)
