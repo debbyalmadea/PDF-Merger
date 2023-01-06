@@ -46,6 +46,12 @@ export default function PDFMerger() {
     });
   }
 
+  async function addPdf(pdfByte) {
+    const newPDF = await PDFDocument.load(pdfByte);
+    const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices());
+    copiedPages.forEach((page) => pdf.addPage(page));
+  }
+
   async function getJpgImage(imageBytes) {
     if (pdf == null) {
       console.log("pdf not init");
@@ -69,6 +75,7 @@ export default function PDFMerger() {
       console.log("pdf is not initiated");
       return;
     }
+    console.log(pdf);
     const pdfBytes = await pdf.save();
     download(
       pdfBytes,
@@ -76,21 +83,6 @@ export default function PDFMerger() {
       "application/pdf"
     );
   }
-
-  async function addFirstMockImage() {
-    const jpgUrl = "https://pdf-lib.js.org/assets/cat_riding_unicorn.jpg";
-    const jpgImageBytes = await fetch(jpgUrl).then((res) => res.arrayBuffer());
-
-    await addImage(jpgImageBytes, "jpg");
-  }
-
-  async function addSecondMockImage() {
-    const pngUrl = "https://pdf-lib.js.org/assets/minions_banana_alpha.png";
-    const pngImageBytes = await fetch(pngUrl).then((res) => res.arrayBuffer());
-
-    await addImage(pngImageBytes, "png");
-  }
-
   async function onFileUpload(input) {
     setFileList(input);
     console.log(input);
@@ -110,10 +102,12 @@ export default function PDFMerger() {
         }
 
         console.info("successfully read file", file);
-        if (fileType === "jpeg") {
+        if (fileType === "image/jpeg") {
           addImage(reader.result, "jpg");
-        } else if (fileType === "png") {
+        } else if (fileType === "image/png") {
           addImage(reader.result, "png");
+        } else if (fileType === "application/pdf") {
+          addPdf(reader.result);
         }
 
         console.info("successfully embed file to pdf", file);
@@ -128,13 +122,13 @@ export default function PDFMerger() {
       <h1 className="lg:text-8xl text-4xl font-extrabold text-center">
         <span className="underline">Quick</span> PDF
       </h1>
-      <p className="lg:text-2xl text-lg text-center my-4">
+      <p className="lg:text-2xl text-lg text-center mt-4 mb-8">
         Convert JPG/PNG images to PDF in seconds
       </p>
       <div className="flex flex-col justify-center items-center">
-        <button className="relative w-full bg-red-500 py-4 rounded-2xl">
+        <button className="relative w-full">
           <label
-            className="text-center lg:text-2xl text-lg text-white w-full"
+            className=" lg:text-2xl text-lg text-white lg:px-32 px-[55px] bg-red-500 py-4 rounded-2xl hover:shadow-lg hover:shadow-red-200 hover:cursor-pointer"
             htmlFor="upload"
           >
             Upload JPG/PNG Files
@@ -142,16 +136,19 @@ export default function PDFMerger() {
           <input
             id="upload"
             type="file"
-            className="absolute z-[-1] top-0 left-0"
+            className="absolute z-[-1] top-0 left-0 w-full text-6xl"
             multiple
             onChange={(e) => onFileUpload(e.target.files)}
           />
         </button>
 
-        <ul className="w-full my-2 font-light lg:text-md text-sm">
+        <ul className="w-full lg:my-6 my-4 font-light lg:text-md text-sm">
           {fileList.length > 0 &&
             Object.keys(fileList).map((key) => (
-              <li className="text-start" key={key}>
+              <li
+                className="text-start lg:w-[460px] w-[240px] text-ellipsis overflow-hidden"
+                key={key}
+              >
                 {fileList[key].name}
               </li>
             ))}
@@ -161,7 +158,7 @@ export default function PDFMerger() {
         </ul>
 
         <button
-          className="w-full bg-red-500 py-4 rounded-2xl lg:text-2xl text-lg text-white"
+          className="w-full bg-red-500 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-200"
           onClick={downloadPdf}
         >
           Download PDF
