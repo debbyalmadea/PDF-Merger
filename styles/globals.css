@@ -10,12 +10,3 @@ body {
   font-family: "Poppins", sans-serif;
   background-color: #f3f0ec;
 }
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-* {
-  box-sizing: border-box;
-}
