@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import download from "downloadjs";
-import { image } from "tailwindcss/lib/util/dataTypes";
+
+enum ImageFormats {
+  PNG,
+  JPG,
+}
 
 export default function PDFMerger() {
-  const [pdf, setPdf] = useState(null);
-  const [fileList, setFileList] = useState([]);
+  const [pdf, setPdf] = useState<null | PDFDocument>(null);
+  const [fileList, setFileList] = useState<[] | FileList>([]);
 
   useEffect(() => {
     async function initPdf() {
@@ -18,7 +22,10 @@ export default function PDFMerger() {
     });
   }, []);
 
-  async function addImage(imageBytes, type) {
+  async function addImage(
+    imageBytes: string | ArrayBuffer,
+    type: ImageFormats
+  ) {
     if (pdf == null) {
       console.log("pdf is not init");
       return;
@@ -26,33 +33,41 @@ export default function PDFMerger() {
 
     let image;
     switch (type) {
-      case "jpg":
+      case ImageFormats.JPG:
         image = await getJpgImage(imageBytes);
         break;
-      case "png":
+      case ImageFormats.PNG:
         image = await getPngImage(imageBytes);
         break;
       default:
         return;
     }
 
-    const dims = image.scale(1);
-    const page = pdf.addPage();
-    page.drawImage(image, {
-      x: 0,
-      y: 0,
-      width: dims.width,
-      height: dims.height,
-    });
+    if (image) {
+      const dims = image.scale(1);
+      const page = pdf.addPage();
+      page.drawImage(image, {
+        x: 0,
+        y: 0,
+        width: dims.width,
+        height: dims.height,
+      });
+    } else {
+      console.log("failed to get image");
+    }
   }
 
-  async function addPdf(pdfByte) {
+  async function addPdf(pdfByte: string | ArrayBuffer) {
     const newPDF = await PDFDocument.load(pdfByte);
-    const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices());
-    copiedPages.forEach((page) => pdf.addPage(page));
+    if (pdf) {
+      const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices());
+      copiedPages.forEach((page) => pdf.addPage(page));
+    } else {
+      console.log("pdf not init");
+    }
   }
 
-  async function getJpgImage(imageBytes) {
+  async function getJpgImage(imageBytes: string | ArrayBuffer) {
     if (pdf == null) {
       console.log("pdf not init");
       return;
@@ -61,7 +76,7 @@ export default function PDFMerger() {
     return await pdf.embedJpg(imageBytes);
   }
 
-  async function getPngImage(imageBytes) {
+  async function getPngImage(imageBytes: string | ArrayBuffer) {
     if (pdf == null) {
       console.log("pdf not init");
       return;
@@ -85,7 +100,11 @@ export default function PDFMerger() {
 
     await resetPDF();
   }
-  async function onFileUpload(input) {
+  async function onFileUpload(input: FileList | null) {
+    if (!input) {
+      return console.log("no file input");
+    }
+
     setFileList(input);
     console.log(input);
 
@@ -105,9 +124,9 @@ export default function PDFMerger() {
 
         console.info("successfully read file", file);
         if (fileType === "image/jpeg") {
-          addImage(reader.result, "jpg");
+          addImage(reader.result, ImageFormats.JPG);
         } else if (fileType === "image/png") {
-          addImage(reader.result, "png");
+          addImage(reader.result, ImageFormats.PNG);
         } else if (fileType === "application/pdf") {
           addPdf(reader.result);
         }
@@ -153,12 +172,12 @@ export default function PDFMerger() {
 
         <ul className="w-full lg:my-6 my-4 font-light lg:text-md text-sm">
           {fileList.length > 0 &&
-            Object.keys(fileList).map((key) => (
+            Object.keys(fileList).map((key: string) => (
               <li
                 className="text-start lg:w-[460px] w-[280px] text-ellipsis overflow-hidden"
                 key={key}
               >
-                {fileList[key].name}
+                {fileList[parseInt(key)].name}
               </li>
             ))}
           {fileList.length === 0 && (
