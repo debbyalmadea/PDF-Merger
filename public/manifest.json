@@ -1,0 +1,38 @@
+{
+    "theme_color": "#dc2626",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "scope": "/",
+    "start_url": "/",
+    "name": "QuickPDF",
+    "short_name": "QuickPDF",
+    "description": "The ultimate solution for merging images and PDFs without the need for a server. Our process is quick and efficient, allowing you to seamlessly combine multiple files with just a few clicks. Whether you're a professional or a personal user, our website is designed to make the process of merging files a breeze. No more waiting for files to upload or dealing with slow servers, our website allows you to merge your files quickly and easily. Rest assured, your files are secure with us. We designed our website to be completely serverless, your files never leave your device, and you have full control over your data, ensuring maximum security and privacy for your sensitive information. Try it out for yourself and experience the convenience and security of merging files without a server today!",
+    "icons": [
+        {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-256x256.png",
+            "sizes": "256x256",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/maskable_icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
