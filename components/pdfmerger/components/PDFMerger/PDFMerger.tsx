@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PageSizes } from "pdf-lib";
 import download from "downloadjs";
 
 enum ImageFormats {
@@ -48,7 +48,7 @@ export default function PDFMerger() {
       const page = pdf.addPage();
       page.drawImage(image, {
         x: 0,
-        y: 0,
+        y: PageSizes.A4[1] / 2 - dims.height / 2,
         width: dims.width,
         height: dims.height,
       });
@@ -155,7 +155,7 @@ export default function PDFMerger() {
       <div className="flex flex-col justify-center items-center">
         <button className="relative w-full">
           <label
-            className=" lg:text-2xl text-lg text-white lg:px-28 px-12 bg-red-500 py-4 rounded-2xl hover:shadow-lg hover:shadow-red-200 hover:cursor-pointer"
+            className=" lg:text-2xl text-lg text-white lg:px-28 px-12 bg-red-600 py-4 rounded-2xl hover:shadow-lg hover:shadow-red-200 hover:cursor-pointer"
             htmlFor="upload"
           >
             Select Images/PDF Files
@@ -186,7 +186,7 @@ export default function PDFMerger() {
         </ul>
 
         <button
-          className="w-full bg-red-500 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-200"
+          className="w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-200"
           onClick={downloadPdf}
         >
           Download PDF
