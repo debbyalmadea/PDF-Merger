@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PDFDocument, PageSizes } from "pdf-lib";
 import download from "downloadjs";
+import Image from "next/image";
 
 enum ImageFormats {
   PNG,
@@ -20,6 +21,8 @@ export default function PDFMerger() {
     initPdf().then((r) => {
       console.log("init pdf successfully");
     });
+
+    console.log(window.matchMedia("(prefers-color-scheme: dark)"));
   }, []);
 
   async function addImage(
@@ -145,17 +148,22 @@ export default function PDFMerger() {
   }
 
   return (
-    <div>
-      <h1 className="lg:text-8xl text-4xl font-extrabold text-center">
-        <span className="underline">Quick</span> PDF
-      </h1>
-      <p className="lg:text-2xl text-lg text-center mt-4 mb-8">
-        Convert JPG/PNG images to PDF in seconds
+    <div className="flex flex-col justify-center items-center text-black dark:text-white">
+      <div className="flex flex-row items-center space-x-2 sm:space-x-4 justify-center">
+        <div className="w-[40px] sm:w-[75px] h-[40px] sm:h-[75px] relative">
+          <Image src={"/icon.png"} alt="logo" fill />
+        </div>
+        <h1 className="sm:text-8xl text-5xl font-extrabold text-center">
+          QuickPDF
+        </h1>
+      </div>
+      <p className="sm:text-2xl text-lg text-center mt-4 mb-8">
+        Merge PDFs and Images quickly and securely
       </p>
-      <div className="flex flex-col justify-center items-center">
+      <div className="flex flex-col justify-center items-center w-[320px] sm:w-[560px]">
         <button className="relative w-full">
           <label
-            className=" lg:text-2xl text-lg text-white lg:px-28 px-12 bg-red-600 py-4 rounded-2xl hover:shadow-lg hover:shadow-red-200 hover:cursor-pointer"
+            className="block sm:text-2xl text-lg text-white  w-full bg-red-600  py-4 rounded-2xl hover:shadow-lg hover:shadow-red-500  hover:cursor-pointer"
             htmlFor="upload"
           >
             Select Images/PDF Files
@@ -174,7 +182,7 @@ export default function PDFMerger() {
           {fileList.length > 0 &&
             Object.keys(fileList).map((key: string) => (
               <li
-                className="text-start lg:w-[460px] w-[280px] text-ellipsis overflow-hidden"
+                className="text-start w-full text-ellipsis overflow-hidden"
                 key={key}
               >
                 {fileList[parseInt(key)].name}
@@ -185,12 +193,14 @@ export default function PDFMerger() {
           )}
         </ul>
 
-        <button
-          className="w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-200"
-          onClick={downloadPdf}
-        >
-          Download PDF
-        </button>
+        {fileList.length > 0 && (
+          <button
+            className="w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-200"
+            onClick={downloadPdf}
+          >
+            Download PDF
+          </button>
+        )}
       </div>
     </div>
   );
