@@ -8,9 +8,19 @@ enum ImageFormats {
   JPG,
 }
 
+enum FileOrientation {
+  Potrait,
+  Landscape,
+}
+
 export default function PDFMerger() {
   const [pdf, setPdf] = useState<null | PDFDocument>(null);
   const [fileList, setFileList] = useState<[] | FileList>([]);
+  const [fileData, setFileData] = useState<
+    [] | { file: File; buffer: ArrayBuffer | string }[]
+  >([]);
+  const [pageSize, setPageSize] = useState<string>("A4");
+  const [orientation, setOrientation] = useState(FileOrientation.Potrait);
 
   useEffect(() => {
     async function initPdf() {
@@ -33,7 +43,6 @@ export default function PDFMerger() {
       console.log("pdf is not init");
       return;
     }
-
     let image;
     switch (type) {
       case ImageFormats.JPG:
@@ -47,11 +56,24 @@ export default function PDFMerger() {
     }
 
     if (image) {
-      const dims = image.scale(1);
-      const page = pdf.addPage();
+      let pageW, pageH;
+      if (pageSize === "Fit") {
+        pageW = image.width;
+        pageH = image.height;
+      } else {
+        if (orientation === FileOrientation.Potrait) {
+          pageW = PageSizes[pageSize as keyof typeof PageSizes][0];
+          pageH = PageSizes[pageSize as keyof typeof PageSizes][1];
+        } else {
+          pageW = PageSizes[pageSize as keyof typeof PageSizes][1];
+          pageH = PageSizes[pageSize as keyof typeof PageSizes][0];
+        }
+      }
+      const dims = image.scaleToFit(pageW, pageH);
+      const page = pdf.addPage([pageW, pageH]);
       page.drawImage(image, {
-        x: 0,
-        y: PageSizes.A4[1] / 2 - dims.height / 2,
+        x: pageW / 2 - dims.width / 2,
+        y: pageH / 2 - dims.height / 2,
         width: dims.width,
         height: dims.height,
       });
@@ -93,8 +115,19 @@ export default function PDFMerger() {
       console.log("pdf is not initiated");
       return;
     }
-    console.log(pdf);
-    const pdfBytes = await pdf.save();
+    console.log(fileData);
+    console.log(pageSize);
+    Array.from(fileData).forEach((data) => {
+      const fileType = data.file.type;
+      if (fileType === "image/jpeg") {
+        addImage(data.buffer, ImageFormats.JPG);
+      } else if (fileType === "image/png") {
+        addImage(data.buffer, ImageFormats.PNG);
+      } else if (fileType === "application/pdf") {
+        addPdf(data.buffer);
+      }
+    });
+    const pdfBytes = await pdf.save({ addDefaultPage: false });
     download(
       pdfBytes,
       "pdf-lib_image_embedding_example.pdf",
@@ -107,13 +140,13 @@ export default function PDFMerger() {
     if (!input) {
       return console.log("no file input");
     }
-
+    let fileDataArray: { file: File; buffer: ArrayBuffer | string }[] = [];
     setFileList(input);
     console.log(input);
 
     Array.from(input).forEach((file) => {
       const reader = new FileReader();
-      const fileType = file.type;
+      // const fileType = file.type;
 
       reader.onerror = () => {
         console.error("failed to read file to buffer", file, reader.error);
@@ -124,21 +157,24 @@ export default function PDFMerger() {
           console.error("file result is null", file, reader.error);
           return;
         }
+        fileDataArray.push({ file: file, buffer: reader.result });
+        // if (fileType === "image/jpeg") {
+        //   addImage(reader.result, ImageFormats.JPG);
+        // } else if (fileType === "image/png") {
+        //   addImage(reader.result, ImageFormats.PNG);
+        // } else if (fileType === "application/pdf") {
+        //   addPdf(reader.result);
+        // }
 
         console.info("successfully read file", file);
-        if (fileType === "image/jpeg") {
-          addImage(reader.result, ImageFormats.JPG);
-        } else if (fileType === "image/png") {
-          addImage(reader.result, ImageFormats.PNG);
-        } else if (fileType === "application/pdf") {
-          addPdf(reader.result);
-        }
 
-        console.info("successfully embed file to pdf", file);
+        // console.info("successfully embed file to pdf", file);
       };
 
       reader.readAsArrayBuffer(file);
     });
+
+    setFileData(fileDataArray);
   }
 
   async function resetPDF() {
@@ -193,9 +229,49 @@ export default function PDFMerger() {
           )}
         </ul>
 
+        <div className="flex flex-row space-x-4">
+          <label htmlFor="page-size" className="sm:text-lg text-md">
+            Page size:
+          </label>
+          <select
+            name="page-size"
+            id="page-size"
+            onChange={(e) => {
+              setPageSize(e.target.value);
+            }}
+            className="sm:text-lg text-md"
+          >
+            <option value="A4">A4</option>
+            <option value="Letter">Letter</option>
+            <option value="Legal">Legal</option>
+            <option value="Fit">Fit Image</option>
+          </select>
+        </div>
+
+        <div className="flex flex-row space-x-4 mt-4 sm:text-lg text-md">
+          <button
+            className={`border-2 w-40 h-20 rounded-lg hover:rounded-xl hover:bg-red-100 hover:border-red-600 hover:text-red-600 ${
+              orientation === FileOrientation.Potrait &&
+              "border-red-600 text-red-600"
+            }`}
+            onClick={() => setOrientation(FileOrientation.Potrait)}
+          >
+            Potrait
+          </button>
+          <button
+            className={`border-2 w-40 h-20 rounded-lg hover:rounded-xl hover:bg-red-100 hover:border-red-600 hover:text-red-600  ${
+              orientation === FileOrientation.Landscape &&
+              "border-red-600 text-red-600"
+            }`}
+            onClick={() => setOrientation(FileOrientation.Landscape)}
+          >
+            Landscape
+          </button>
+        </div>
+
         {fileList.length > 0 && (
           <button
-            className="w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-200"
+            className="mt-8 w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-500"
             onClick={downloadPdf}
           >
             Download PDF
