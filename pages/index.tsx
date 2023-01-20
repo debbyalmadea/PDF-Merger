@@ -1,6 +1,7 @@
 import PDFMerger from "../components/pdfmerger/components/PDFMerger/PDFMerger";
 import { NextPage } from "next";
 import Head from "next/head";
+import { Navbar } from "../components/common/Navbar/Navbar";
 
 const Home: NextPage = () => {
   return (
@@ -12,8 +13,11 @@ const Home: NextPage = () => {
           content="Introducing our serverless website for quick and secure merging of images and PDFs. Our process is quick and efficient and your files never leave your device, ensuring maximum security and privacy."
         />
       </Head>
-      <div className="w-screen h-screen flex flex-row justify-center items-center lg:px-16 px-8 bg-white dark:bg-black">
-        <PDFMerger />
+      <div className="w-screen h-screen flex flex-col justify-center items-center flex-0 bg-white dark:bg-black">
+        <Navbar />
+        <main className="w-screen flex flex-row flex-1 justify-center items-center lg:px-16 px-8">
+          <PDFMerger />
+        </main>
       </div>
     </>
   );

@@ -239,7 +239,7 @@ export default function PDFMerger() {
             onChange={(e) => {
               setPageSize(e.target.value);
             }}
-            className="sm:text-lg text-md"
+            className="sm:text-lg text-md bg-transparent"
           >
             <option value="A4">A4</option>
             <option value="Letter">Letter</option>
