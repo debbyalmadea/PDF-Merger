@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PDFDocument, PageSizes } from "pdf-lib";
+import { PDFDocument, PageSizes, PDFPage } from "pdf-lib";
 import download from "downloadjs";
 import Image from "next/image";
 
@@ -12,6 +12,10 @@ enum FileOrientation {
   Potrait,
   Landscape,
 }
+
+type pdfPromise =
+  | Promise<typeof PDFPage | undefined>
+  | Promise<PDFPage[] | undefined>;
 
 export default function PDFMerger() {
   const [pdf, setPdf] = useState<null | PDFDocument>(null);
@@ -77,6 +81,8 @@ export default function PDFMerger() {
         width: dims.width,
         height: dims.height,
       });
+
+      return PDFPage;
     } else {
       console.log("failed to get image");
     }
@@ -86,7 +92,12 @@ export default function PDFMerger() {
     const newPDF = await PDFDocument.load(pdfByte);
     if (pdf) {
       const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices());
-      copiedPages.forEach((page) => pdf.addPage(page));
+      copiedPages.forEach((page) => {
+        pdf.addPage(page);
+        console.log("added page");
+      });
+
+      return copiedPages;
     } else {
       console.log("pdf not init");
     }
@@ -115,19 +126,25 @@ export default function PDFMerger() {
       console.log("pdf is not initiated");
       return;
     }
+    let promises: pdfPromise[] = [];
     console.log(fileData);
     console.log(pageSize);
+
     Array.from(fileData).forEach((data) => {
       const fileType = data.file.type;
       if (fileType === "image/jpeg") {
-        addImage(data.buffer, ImageFormats.JPG);
+        promises.push(addImage(data.buffer, ImageFormats.JPG));
       } else if (fileType === "image/png") {
-        addImage(data.buffer, ImageFormats.PNG);
+        promises.push(addImage(data.buffer, ImageFormats.PNG));
       } else if (fileType === "application/pdf") {
-        addPdf(data.buffer);
+        console.log("embedding pdf");
+        promises.push(addPdf(data.buffer));
       }
     });
-    const pdfBytes = await pdf.save({ addDefaultPage: false });
+
+    await Promise.all(promises);
+    const pdfBytes = await pdf.save();
+    console.log("download", pdfBytes);
     download(
       pdfBytes,
       "pdf-lib_image_embedding_example.pdf",
@@ -136,6 +153,7 @@ export default function PDFMerger() {
 
     await resetPDF();
   }
+
   async function onFileUpload(input: FileList | null) {
     if (!input) {
       return console.log("no file input");
