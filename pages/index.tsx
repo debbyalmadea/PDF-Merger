@@ -2,6 +2,7 @@ import PDFMerger from "../components/pdfmerger/components/PDFMerger/PDFMerger";
 import { NextPage } from "next";
 import Head from "next/head";
 import { Navbar } from "../components/common/Navbar/Navbar";
+import { Footer } from "../components/common/Footer/Footer";
 
 const Home: NextPage = () => {
   return (
@@ -18,6 +19,7 @@ const Home: NextPage = () => {
         <main className="w-screen flex flex-row flex-1 justify-center items-center lg:px-16 px-8">
           <PDFMerger />
         </main>
+        <Footer />
       </div>
     </>
   );
