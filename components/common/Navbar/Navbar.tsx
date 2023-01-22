@@ -1,6 +1,6 @@
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -23,11 +23,11 @@ export function Navbar() {
     useState<BeforeInstallPromptEvent | null>(null);
 
   if (typeof window !== "undefined") {
-    console.log("test");
     window.addEventListener("beforeinstallprompt", (e) => {
-      setShowButton(true);
+      console.log("test");
       setDeferredPrompt(e);
       console.log(deferredPrompt);
+      setShowButton(true);
     });
   }
 
@@ -44,7 +44,7 @@ export function Navbar() {
   }
 
   return (
-    <div className="flex w-full justify-end py-8 lg:px-16 px-8">
+    <div className="flex w-full justify-end mb-8 lg:px-16 px-8">
       {showButton && (
         <button
           onClick={onClickInstall}
