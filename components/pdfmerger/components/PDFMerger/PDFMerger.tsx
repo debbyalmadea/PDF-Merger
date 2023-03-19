@@ -25,6 +25,7 @@ export default function PDFMerger() {
   >([]);
   const [pageSize, setPageSize] = useState<string>("A4");
   const [orientation, setOrientation] = useState(FileOrientation.Potrait);
+  const [fileName, setFileName] = useState<string>("");
 
   useEffect(() => {
     async function initPdf() {
@@ -145,11 +146,7 @@ export default function PDFMerger() {
     await Promise.all(promises);
     const pdfBytes = await pdf.save();
     console.log("download", pdfBytes);
-    download(
-      pdfBytes,
-      "pdf-lib_image_embedding_example.pdf",
-      "application/pdf"
-    );
+    download(pdfBytes, fileName + ".pdf", "application/pdf");
 
     await resetPDF();
   }
@@ -164,8 +161,6 @@ export default function PDFMerger() {
 
     Array.from(input).forEach((file) => {
       const reader = new FileReader();
-      // const fileType = file.type;
-
       reader.onerror = () => {
         console.error("failed to read file to buffer", file, reader.error);
       };
@@ -176,23 +171,15 @@ export default function PDFMerger() {
           return;
         }
         fileDataArray.push({ file: file, buffer: reader.result });
-        // if (fileType === "image/jpeg") {
-        //   addImage(reader.result, ImageFormats.JPG);
-        // } else if (fileType === "image/png") {
-        //   addImage(reader.result, ImageFormats.PNG);
-        // } else if (fileType === "application/pdf") {
-        //   addPdf(reader.result);
-        // }
 
         console.info("successfully read file", file);
-
-        // console.info("successfully embed file to pdf", file);
       };
 
       reader.readAsArrayBuffer(file);
     });
 
     setFileData(fileDataArray);
+    setFileName(input[0].name.replace(/\.[^\/.]+$/, ""));
   }
 
   async function resetPDF() {
@@ -288,12 +275,22 @@ export default function PDFMerger() {
         </div>
 
         {fileList.length > 0 && (
-          <button
-            className="mt-8 w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-500"
-            onClick={downloadPdf}
-          >
-            Download PDF
-          </button>
+          <div className="flex flex-col justify-start w-full my-8">
+            <div className="flex flex-row space-x-4 items-center">
+              <label>File name</label>
+              <input
+                className="border-2 grow rounded-xl px-4 py-2"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+              />
+            </div>
+            <button
+              className="mt-8 w-full bg-red-600 py-4 rounded-2xl lg:text-2xl text-lg text-white hover:cursor-pointer hover:shadow-lg hover:shadow-red-500"
+              onClick={downloadPdf}
+            >
+              Download PDF
+            </button>
+          </div>
         )}
       </div>
     </div>
