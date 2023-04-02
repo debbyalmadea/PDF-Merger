@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PDFDocument, PageSizes, PDFPage } from "pdf-lib";
 import download from "downloadjs";
 import Image from "next/image";
+import DraggableList from "../../../common/DraggableList";
 
 enum ImageFormats {
   PNG,
@@ -13,16 +14,9 @@ enum FileOrientation {
   Landscape,
 }
 
-type pdfPromise =
-  | Promise<typeof PDFPage | undefined>
-  | Promise<PDFPage[] | undefined>;
-
 export default function PDFMerger() {
   const [pdf, setPdf] = useState<null | PDFDocument>(null);
-  const [fileList, setFileList] = useState<[] | FileList>([]);
-  const [fileData, setFileData] = useState<
-    [] | { file: File; buffer: ArrayBuffer | string }[]
-  >([]);
+  const [fileList, setFileList] = useState<[] | Array<File>>([]);
   const [pageSize, setPageSize] = useState<string>("A4");
   const [orientation, setOrientation] = useState(FileOrientation.Potrait);
   const [fileName, setFileName] = useState<string>("");
@@ -40,9 +34,11 @@ export default function PDFMerger() {
     console.log(window.matchMedia("(prefers-color-scheme: dark)"));
   }, []);
 
-  async function addImage(
+  async function insertImage(
+    index: number,
     imageBytes: string | ArrayBuffer,
-    type: ImageFormats
+    type: ImageFormats,
+    file?: File
   ) {
     if (pdf == null) {
       console.log("pdf is not init");
@@ -75,7 +71,10 @@ export default function PDFMerger() {
         }
       }
       const dims = image.scaleToFit(pageW, pageH);
-      const page = pdf.addPage([pageW, pageH]);
+      index = getActualIndex(index);
+      console.log("add image", file?.name, "index", index);
+      const page = pdf.insertPage(index, [pageW, pageH]);
+
       page.drawImage(image, {
         x: pageW / 2 - dims.width / 2,
         y: pageH / 2 - dims.height / 2,
@@ -83,24 +82,69 @@ export default function PDFMerger() {
         height: dims.height,
       });
 
-      return PDFPage;
+      return page;
     } else {
       console.log("failed to get image");
     }
   }
 
-  async function addPdf(pdfByte: string | ArrayBuffer) {
+  async function insertPdf(
+    index: number,
+    pdfByte: string | ArrayBuffer,
+    pdfFile?: File
+  ) {
     const newPDF = await PDFDocument.load(pdfByte);
     if (pdf) {
       const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices());
+      index = getActualIndex(index);
+
       copiedPages.forEach((page) => {
-        pdf.addPage(page);
-        console.log("added page");
+        pdf.insertPage(index, page);
+        console.log("added page", pdfFile?.name, "to index", index);
+        index++;
       });
 
       return copiedPages;
     } else {
       console.log("pdf not init");
+    }
+  }
+
+  /**
+   *
+   * @param index index of file in file list
+   * @returns actual starting index of the file in pdf
+   */
+  function getActualIndex(index: number) {
+    if (pdf) {
+      while (index > pdf.getPageCount()) {
+        pdf.addPage([1, 1]); // mark as temporary pages
+      }
+
+      // get the actual starting index of the file in pdf
+      while (
+        index < pdf.getPageCount() &&
+        pdf.getPage(index).getSize().width > 1 && // if it's not temporary pages
+        pdf.getPage(index).getSize().height > 1
+      ) {
+        index++;
+        console.log("increment index to", index);
+      }
+
+      // if the actual starting index are used by temporary pages
+      if (
+        index < pdf.getPageCount() &&
+        pdf.getPage(index).getSize().width == 1 &&
+        pdf.getPage(index).getSize().height == 1
+      ) {
+        console.log("removing page", index);
+        pdf.removePage(index);
+      }
+
+      return index;
+    } else {
+      console.log("pdf not init");
+      return -1;
     }
   }
 
@@ -127,58 +171,116 @@ export default function PDFMerger() {
       console.log("pdf is not initiated");
       return;
     }
-    let promises: pdfPromise[] = [];
-    console.log(fileData);
     console.log(pageSize);
 
-    Array.from(fileData).forEach((data) => {
-      const fileType = data.file.type;
-      if (fileType === "image/jpeg") {
-        promises.push(addImage(data.buffer, ImageFormats.JPG));
-      } else if (fileType === "image/png") {
-        promises.push(addImage(data.buffer, ImageFormats.PNG));
-      } else if (fileType === "application/pdf") {
-        console.log("embedding pdf");
-        promises.push(addPdf(data.buffer));
-      }
-    });
+    const fileDataArray: { file: File; buffer: ArrayBuffer | string }[] =
+      await readFile();
 
-    await Promise.all(promises);
-    const pdfBytes = await pdf.save();
-    console.log("download", pdfBytes);
-    download(pdfBytes, fileName + ".pdf", "application/pdf");
+    console.log(fileDataArray);
 
-    await resetPDF();
+    const pdfPagesArray: Array<PDFPage | PDFPage[] | undefined> =
+      await addPages(fileDataArray);
+
+    if (pdfPagesArray.length > 0) {
+      const pdfBytes = await pdf.save();
+      console.log("download", pdfBytes);
+      download(pdfBytes, fileName + ".pdf", "application/pdf");
+      await resetPDF();
+    }
   }
 
-  async function onFileUpload(input: FileList | null) {
+  /**
+   *
+   * @param fileDataArray array of file data
+   * @returns pdf pages
+   */
+  function addPages(
+    fileDataArray: { file: File; buffer: ArrayBuffer | string }[]
+  ): Promise<Array<PDFPage | undefined | PDFPage[]>> {
+    return new Promise((resolve, reject) => {
+      let pdfPages: Array<PDFPage | undefined | PDFPage[]> = [];
+
+      Array.from(fileDataArray).forEach(async (data, index) => {
+        const fileType = data.file.type;
+        if (fileType === "image/jpeg") {
+          console.log("embedding jpeg", data.file.name, index);
+          const page = await insertImage(
+            index,
+            data.buffer,
+            ImageFormats.JPG,
+            data.file
+          );
+          pdfPages.push(page);
+        } else if (fileType === "image/png") {
+          console.log("embedding png", data.file.name, index);
+          const page = await insertImage(
+            index,
+            data.buffer,
+            ImageFormats.PNG,
+            data.file
+          );
+          pdfPages.push(page);
+        } else if (fileType === "application/pdf") {
+          console.log("embedding pdf", data.file.name, index);
+          const page = await insertPdf(index, data.buffer, data.file);
+          pdfPages.push(page);
+        }
+
+        if (pdfPages.length == fileDataArray.length) {
+          resolve(pdfPages);
+        }
+      });
+    });
+  }
+
+  /**
+   * convert array of file to array of file data
+   * @returns array of file data
+   */
+  function readFile(): Promise<{ file: File; buffer: ArrayBuffer | string }[]> {
+    console.log("file list", fileList);
+    return new Promise((resolve, reject) => {
+      let fileDataArray: { file: File; buffer: ArrayBuffer | string }[] = [];
+
+      Array.from(fileList).forEach((file, index) => {
+        console.log("reading", file.name);
+        const reader = new FileReader();
+        reader.onerror = () => {
+          console.error("failed to read file to buffer", file, reader.error);
+          reject();
+        };
+
+        reader.onload = () => {
+          if (reader.result == null) {
+            console.error("file result is null", file, reader.error);
+            return;
+          }
+
+          if (fileDataArray[index] != null) {
+            fileDataArray.splice(index, 0, {
+              file: file,
+              buffer: reader.result,
+            });
+          } else {
+            fileDataArray.push({ file: file, buffer: reader.result });
+          }
+          console.info("successfully read file", file);
+
+          if (fileDataArray.length == fileList.length) {
+            resolve(fileDataArray);
+          }
+        };
+
+        reader.readAsArrayBuffer(file);
+      });
+    });
+  }
+
+  function onFileUpload(input: FileList | null) {
     if (!input) {
       return console.log("no file input");
     }
-    let fileDataArray: { file: File; buffer: ArrayBuffer | string }[] = [];
-    setFileList(input);
-    console.log(input);
-
-    Array.from(input).forEach((file) => {
-      const reader = new FileReader();
-      reader.onerror = () => {
-        console.error("failed to read file to buffer", file, reader.error);
-      };
-
-      reader.onload = () => {
-        if (reader.result == null) {
-          console.error("file result is null", file, reader.error);
-          return;
-        }
-        fileDataArray.push({ file: file, buffer: reader.result });
-
-        console.info("successfully read file", file);
-      };
-
-      reader.readAsArrayBuffer(file);
-    });
-
-    setFileData(fileDataArray);
+    setFileList(Array.from(input));
     setFileName(input[0].name.replace(/\.[^\/.]+$/, ""));
   }
 
@@ -220,15 +322,9 @@ export default function PDFMerger() {
         </button>
 
         <ul className="w-full lg:my-6 my-4 font-light lg:text-md text-sm">
-          {fileList.length > 0 &&
-            Object.keys(fileList).map((key: string) => (
-              <li
-                className="text-start w-full text-ellipsis overflow-hidden"
-                key={key}
-              >
-                {fileList[parseInt(key)].name}
-              </li>
-            ))}
+          {fileList.length > 0 && (
+            <DraggableList fileList={fileList} setFileList={setFileList} />
+          )}
           {fileList.length === 0 && (
             <li className="text-start">No file uploaded. yet.</li>
           )}
