@@ -30,15 +30,12 @@ export default function PDFMerger() {
     initPdf().then((r) => {
       console.log("init pdf successfully");
     });
-
-    console.log(window.matchMedia("(prefers-color-scheme: dark)"));
   }, []);
 
   async function insertImage(
     index: number,
     imageBytes: string | ArrayBuffer,
-    type: ImageFormats,
-    file?: File
+    type: ImageFormats
   ) {
     if (pdf == null) {
       console.log("pdf is not init");
@@ -71,8 +68,7 @@ export default function PDFMerger() {
         }
       }
       const dims = image.scaleToFit(pageW, pageH);
-      index = getActualIndex(index);
-      console.log("add image", file?.name, "index", index);
+      index = getNewPageIndex(index);
       const page = pdf.insertPage(index, [pageW, pageH]);
 
       page.drawImage(image, {
@@ -88,19 +84,51 @@ export default function PDFMerger() {
     }
   }
 
-  async function insertPdf(
-    index: number,
-    pdfByte: string | ArrayBuffer,
-    pdfFile?: File
-  ) {
+  function scaleToFitPage(page: PDFPage) {
+    let pageW, pageH;
+    if (pageSize === "Fit") {
+      pageW = page.getWidth();
+      pageH = page.getHeight();
+    } else {
+      if (orientation === FileOrientation.Potrait) {
+        pageW = PageSizes[pageSize as keyof typeof PageSizes][0];
+        pageH = PageSizes[pageSize as keyof typeof PageSizes][1];
+      } else {
+        pageW = PageSizes[pageSize as keyof typeof PageSizes][1];
+        pageH = PageSizes[pageSize as keyof typeof PageSizes][0];
+      }
+    }
+    let scaleW = (pageW / page.getWidth()) * 1.0;
+    let scaleH = (pageH / page.getHeight()) * 1.0;
+
+    if (scaleW < scaleH) {
+      let newH = (page.getHeight() / page.getWidth()) * pageW;
+      scaleH = (newH / page.getHeight()) * 1.0;
+    } else {
+      let newW = (page.getWidth() / page.getHeight()) * pageH;
+      scaleW = (newW / page.getWidth()) * 1.0;
+    }
+
+    page.scale(scaleW, scaleH);
+    page.setMediaBox(
+      -(pageW / 2 - page.getWidth() / 2),
+      -(pageH / 2 - page.getHeight() / 2),
+      pageW,
+      pageH
+    );
+
+    return page;
+  }
+
+  async function insertPdf(index: number, pdfByte: string | ArrayBuffer) {
     const newPDF = await PDFDocument.load(pdfByte);
     if (pdf) {
       const copiedPages = await pdf.copyPages(newPDF, newPDF.getPageIndices());
-      index = getActualIndex(index);
+      index = getNewPageIndex(index);
 
       copiedPages.forEach((page) => {
+        page = scaleToFitPage(page);
         pdf.insertPage(index, page);
-        console.log("added page", pdfFile?.name, "to index", index);
         index++;
       });
 
@@ -113,15 +141,15 @@ export default function PDFMerger() {
   /**
    *
    * @param index index of file in file list
-   * @returns actual starting index of the file in pdf
+   * @returns new starting index of the file in pdf
    */
-  function getActualIndex(index: number) {
+  function getNewPageIndex(index: number) {
     if (pdf) {
       while (index > pdf.getPageCount()) {
         pdf.addPage([1, 1]); // mark as temporary pages
       }
 
-      // get the actual starting index of the file in pdf
+      // get the new starting index of the file in pdf
       while (
         index < pdf.getPageCount() &&
         pdf.getPage(index).getSize().width > 1 && // if it's not temporary pages
@@ -204,25 +232,15 @@ export default function PDFMerger() {
         const fileType = data.file.type;
         if (fileType === "image/jpeg") {
           console.log("embedding jpeg", data.file.name, index);
-          const page = await insertImage(
-            index,
-            data.buffer,
-            ImageFormats.JPG,
-            data.file
-          );
+          const page = await insertImage(index, data.buffer, ImageFormats.JPG);
           pdfPages.push(page);
         } else if (fileType === "image/png") {
           console.log("embedding png", data.file.name, index);
-          const page = await insertImage(
-            index,
-            data.buffer,
-            ImageFormats.PNG,
-            data.file
-          );
+          const page = await insertImage(index, data.buffer, ImageFormats.PNG);
           pdfPages.push(page);
         } else if (fileType === "application/pdf") {
           console.log("embedding pdf", data.file.name, index);
-          const page = await insertPdf(index, data.buffer, data.file);
+          const page = await insertPdf(index, data.buffer);
           pdfPages.push(page);
         }
 
@@ -318,6 +336,7 @@ export default function PDFMerger() {
             className="absolute z-[-1] top-0 left-0 w-full text-6xl"
             multiple
             onChange={(e) => onFileUpload(e.target.files)}
+            onClick={(e) => (e.currentTarget.value = "")}
           />
         </button>
 
@@ -345,7 +364,7 @@ export default function PDFMerger() {
             <option value="A4">A4</option>
             <option value="Letter">Letter</option>
             <option value="Legal">Legal</option>
-            <option value="Fit">Fit Image</option>
+            <option value="Fit">Fit</option>
           </select>
         </div>
 
